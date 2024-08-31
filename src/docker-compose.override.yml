@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  orderdb:
+    container_name: orderdb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  messagebroker:
+    container_name: messagebroker
+    hostname: ecommerce-mq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  rediscache:
+    container_name: rediscache
+    restart: always
+    ports:
+      - "6379:6379"
+
+  portainer:
+    container_name: portainer
+    restart: always
+    ports:
+      - "8080:8000"
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+  basketservice:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MessageBroker__Host=amqp://ecommerce-mq:5672
+      - MessageBroker__UserName=guest
+      - MessageBroker__Password=guest
+      - ConnectionStrings__Redis=rediscache:6379
+    depends_on:
+      - messagebroker
+      - rediscache
+    ports:
+      - "6001:8080"
+      - "6061:8081"
+
+  orderservice:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MessageBroker__Host=amqp://ecommerce-mq:5672
+      - MessageBroker__UserName=guest
+      - MessageBroker__Password=guest
+      - "ConnectionStrings:MongoDb=mongodb://orderdb:27017"
+    depends_on:
+      - orderdb
+      - messagebroker
+    ports:
+      - "6002:8080"
+      - "6062:8081"
+
+  queueapigateway:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MessageBroker__Host=amqp://ecommerce-mq:5672
+      - MessageBroker__UserName=guest
+      - MessageBroker__Password=guest
+    depends_on:
+      - basketservice
+      - orderservice
+    ports:
+      - "6000:8080"
+      - "6060:8081"

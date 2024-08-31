@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  orderdb:
+    image: mongo
+
+  messagebroker:
+    image: rabbitmq:management
+
+  rediscache:
+    image: redis
+
+  portainer:
+    image: portainer/portainer-ce
+
+  basketservice:
+    image: ${DOCKER_REGISTRY-}basketservice
+    build:
+      context: .
+      dockerfile: Basket.Dockerfile
+
+  orderservice:
+    image: ${DOCKER_REGISTRY-}orderservice
+    build:
+      context: .
+      dockerfile: Order.Dockerfile
+
+  queueapigateway:
+    image: ${DOCKER_REGISTRY-}queueapigateway
+    build:
+      context: .
+      dockerfile: Gateway.Dockerfile
+
+volumes:
+  mongo_data:
+  portainer_data:  
