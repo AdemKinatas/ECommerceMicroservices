@@ -1,6 +1,5 @@
-﻿using NLog.Web;
+﻿using NLog.Extensions.Logging;
 using QueueApiGateway.Endpoints;
-using Shared.Logging;
 using Shared.Messages.MassTransit;
 using Shared.Middlewares;
 
@@ -18,9 +17,13 @@ public static class DependencyInjection
 
         #region [ NLOG ]
 
-        builder.Logging.ClearProviders();
-        builder.Logging.SetMinimumLevel(LogLevel.Trace);
-        builder.Host.UseNLog();
+        builder.Services.AddLogging(logging =>
+        {
+            logging.ClearProviders();
+            logging.SetMinimumLevel(LogLevel.Trace);
+        });
+
+        builder.Services.AddSingleton<ILoggerProvider, NLogLoggerProvider>();
 
         #endregion
 
@@ -29,7 +32,19 @@ public static class DependencyInjection
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        #endregion 
+        #endregion
+
+        #region [ CORS ]
+
+        builder.Services.AddCors(opt => 
+        {
+            opt.AddPolicy("gwSecretKey", builder => 
+            {
+                builder.WithOrigins("*").AllowAnyMethod().AllowAnyHeader();
+            });
+        });
+
+        #endregion
 
         return services;
     }
@@ -42,12 +57,12 @@ public static class DependencyInjection
             app.UseSwaggerUI();
         }
 
+        app.UseCors("gwSecretKey");
+
         app.MapBasketEndpoints();
         app.MapOrderEndpoints();
 
         app.UseMiddleware<ErrorHandlingMiddleware>();
-
-        LoggingService.LogInfo("Application started successfully.");
 
         return app;
     }

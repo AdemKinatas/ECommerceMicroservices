@@ -1,7 +1,6 @@
 using Order.API;
 using Order.Application;
 using Order.Infrastructure;
-using Shared.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 

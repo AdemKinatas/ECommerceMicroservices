@@ -1,6 +1,8 @@
 ﻿using Mapster;
 using MassTransit;
+using MediatR;
 using Microsoft.Extensions.Logging;
+using Order.Application.Features.Order.Commands.CreateOrder;
 using Order.Application.Interfaces;
 using Shared.Messages.Basket;
 using Shared.Messages.Order;
@@ -11,36 +13,29 @@ public class OrderCreatedConsumer : IConsumer<CreateOrderMessage>
 {
     private readonly IOrderService _orderService; 
     private readonly IPublishEndpoint _publishEndpoint; 
-    private readonly ILogger<OrderCreatedConsumer> _logger; 
+    private readonly IMediator _mediator;
+    private readonly ILogger<OrderCreatedConsumer> _logger;
 
-    public OrderCreatedConsumer(IOrderService orderService, IPublishEndpoint publishEndpoint, ILogger<OrderCreatedConsumer> logger)
+    public OrderCreatedConsumer(IOrderService orderService, IPublishEndpoint publishEndpoint, ILogger<OrderCreatedConsumer> logger, IMediator mediator)
     {
         _orderService = orderService;
         _publishEndpoint = publishEndpoint;
         _logger = logger;
+        _mediator = mediator;
     }
 
     public async Task Consume(ConsumeContext<CreateOrderMessage> context)
     {
         var message = context.Message;
 
-        var items = message.Items.Adapt<List<Domain.Entities.OrderItem>>();
-        var order = new Domain.Entities.Order
+        var command = message.Adapt<CreateOrderCommand>();
+
+        var result = await _mediator.Send(command);
+
+        if (!result)
         {
-            CustomerId = message.CustomerId,
-            //Items = message.Items.Select(item => new Domain.Entities.OrderItem
-            //{
-            //    ProductName = item.ProductName,
-            //    Quantity = item.Quantity,
-            //    Price = item.Price
-            //}).ToList(),
-            Items = items,
-            TotalAmount = message.TotalAmount
-        };
-
-        await _orderService.CreateOrderAsync(order);
-
-        _logger.LogInformation("Sipariş başarıyla kaydedildi: Müşteri ID: {CustomerId}", message.CustomerId);
+            _logger.LogError($"Sipariş kaydedilirken hata oluştu: Müşteri ID: {message.CustomerId}");
+        }
 
         var orderProcessedMessage = new OrderProcessedMessage
         {

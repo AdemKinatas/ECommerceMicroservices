@@ -1,5 +1,4 @@
-﻿using NLog.Web;
-using Shared.Logging;
+﻿using NLog.Extensions.Logging;
 using Shared.Middlewares;
 
 namespace Order.API;
@@ -8,14 +7,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApiServices(this IServiceCollection services, WebApplicationBuilder builder)
     {
-        #region [ NLOG ]
-
-        builder.Logging.ClearProviders();
-        builder.Logging.SetMinimumLevel(LogLevel.Trace);
-        builder.Host.UseNLog();
-
-        #endregion
-
         #region [ Swagger ]
 
         builder.Services.AddEndpointsApiExplorer();
@@ -37,8 +28,6 @@ public static class DependencyInjection
         app.UseHttpsRedirection();
 
         app.UseMiddleware<ErrorHandlingMiddleware>();
-
-        LoggingService.LogInfo("Application started successfully.");
 
         return app;
     }
